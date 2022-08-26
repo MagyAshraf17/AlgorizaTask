@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutterudemy/shared/cubit/cubit.dart';
 
 class TaskItem extends StatelessWidget {
   final Map model;
@@ -18,24 +19,44 @@ class TaskItem extends StatelessWidget {
           const SizedBox(
             width: 30.0,
           ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${model['title']}',
-                style: const TextStyle(
-                  fontSize: 16.0,
-                  fontWeight: FontWeight.bold,
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${model['title']}',
+                  style: const TextStyle(
+                    fontSize: 16.0,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              Text(
-                ' ${model['date']}',
-                style: const TextStyle(
-                  color: Colors.grey,
+                Text(
+                  ' ${model['date']}',
+                  style: const TextStyle(
+                    color: Colors.grey,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          const SizedBox(
+            width: 30.0,
+          ),
+          IconButton(
+            onPressed: () {
+              TodoCubit.get(context)
+                  .updateDatadase(status: 'done', id: model['id']);
+            },
+            icon: const Icon(
+              Icons.check_circle_outline_rounded,
+            ),
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(
+              Icons.archive_outlined,
+            ),
+          )
         ],
       ),
     );

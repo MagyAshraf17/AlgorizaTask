@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart' show BlocProvider, Cubit;
 import 'package:flutterudemy/shared/cubit/states.dart';
+import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
 import '../../todo/archive_task/archive_task_screen.dart';
@@ -12,16 +13,17 @@ class TodoCubit extends Cubit<TodoStates> {
 
   static TodoCubit get(context) => BlocProvider.of<TodoCubit>(context);
 
-  TextEditingController titleController = TextEditingController();
-  TextEditingController timeController = TextEditingController();
-  TextEditingController dateController = TextEditingController();
-
   bool isBottomSheetShown = false;
 
   IconData fabIcon = Icons.edit;
 
   late Database database;
 
+  TextEditingController titleController = TextEditingController();
+  TextEditingController timeController = TextEditingController();
+  TextEditingController dateController = TextEditingController();
+
+  TextEditingController statusController = TextEditingController();
   int currentIndex = 0;
 
   List<Map> tasks = [];
@@ -42,66 +44,80 @@ class TodoCubit extends Cubit<TodoStates> {
     emit(TodoNavBarState());
   }
 
-  void creatDB() {
-    openDatabase('todoDB.db', version: 1, onCreate: (database, version) {
-      print(' DB created');
-      database
-          .execute(
-              'Create Table List (id INTEGER PRIMARY KEY,title TEXT,date TEXT ,time TEXT,status TEXT)')
-          .then((value) {
-        print(' table created');
-      }).catchError((error) {
-        print('error Creating tabel ${error.toString()}');
-      });
-    }, onOpen: (database) {
-      print('database opend');
+  void creatDB() async {
+    var databasesPath = await getDatabasesPath();
+    String path = p.join(databasesPath, 'todo.db');
+    debugPrint('Todo database Created');
+    opentTodoDatabase(path: path);
+    emit(CreateDatabaseState());
+  }
+
+  void opentTodoDatabase({
+    required String path,
+  }) async {
+    database = await openDatabase(
+      path,
+      version: 1,
+      onCreate: (Database db, int version) async {
+        // When creating the db, create the table
+
+        await db.execute(
+            'CREATE TABLE Task (id INTEGER PRIMARY KEY, title TEXT, time TEXT, date TEXT,status TEXT)');
+
+        debugPrint('Table Created');
+      },
+      onOpen: (Database db) {
+        debugPrint('database opend ');
+        database = db;
+        getTasksDatabase();
+      },
+    );
+  }
+
+  void insertTaskDatabase() async {
+    database.transaction((txn) async {
+      await txn.rawInsert(
+          'INSERT INTO Task(title, date, time,status) VALUES("${titleController.text}", "${dateController.text}", "${timeController.text}","new")');
     }).then((value) {
-      print('inserted data to database');
+      debugPrint('inserted data to database');
       titleController.clear();
       timeController.clear();
       dateController.clear();
-      getFromDatabase(database).then((value) {
-        tasks = value;
-        print(tasks);
-        emit(GetDatabaseState());
-      });
-      emit(InsertDatabaseState());
+      emit(InsertTaskToDatabaseState());
     });
   }
 
-  void insertToDatabase({
-    required String title,
-    required String date,
-    required String time,
-  }) async {
-    await database.transaction((txn) async {
-      txn
-          .rawInsert(
-        'INSERT INTO List (title ,date,time ,status) VALUES ("$title","$date","$time","new")',
-      )
-          .then((value) {
-        print('$value inserted succsess');
-        emit(InsertDatabaseState());
-        getFromDatabase(database).then((value) {
-          tasks = value;
-          print(tasks);
-          emit(GetDatabaseState());
-        });
-      }).catchError((error) {
-        print('not inserted  ${error.toString()}');
-      });
-      throw ('error');
+  void getTasksDatabase() async {
+    emit(GetDatabaseLoadingState());
+    database.rawQuery('SELECT * FROM Task').then((value) {
+      tasks = value;
+      print(tasks);
+      emit(GetDatabaseState());
     });
   }
 
-  Future<List<Map>> getFromDatabase(database) async {
-    return await database.rawQuery('SELECT * FROM List');
+  // Map selectedTask = {};
+
+  // void selectedToUpdateTask({
+  //   required Map updateTask,
+  // }) {
+  //   selectedTask = updateTask;
+  //   statusController.text = selectedTask['status'];
+  // }
+
+  void updateDatadase({required String status, required int id}) async {
+    return await database.rawUpdate('UPDATE Task SET status = ? WHERE id = ?',
+        ['${status}', id]).then((value) {
+      emit(UpdateTaskToDatabaseState());
+      debugPrint('updated tasks');
+      print(tasks);
+    });
   }
 
-  void ChangeBottomSheet({
+  Future<void> changeBottomSheet({
     required IconData icon,
     required bool isShow,
-  }) {
+  }) async {
     isBottomSheetShown = isShow;
     fabIcon = icon;
     emit(BottomSheetState());

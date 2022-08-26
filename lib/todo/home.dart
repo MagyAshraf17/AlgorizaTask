@@ -16,9 +16,7 @@ class HomeLayout extends StatelessWidget {
   var scaffoldKey = GlobalKey<ScaffoldState>();
   var formKey = GlobalKey<FormState>();
 
-  var titleController = TextEditingController();
-  var timeController = TextEditingController();
-  var dateController = TextEditingController();
+  HomeLayout({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -26,8 +24,11 @@ class HomeLayout extends StatelessWidget {
       create: (BuildContext context) => TodoCubit()..creatDB(),
       child: BlocConsumer<TodoCubit, TodoStates>(
         listener: (BuildContext context, TodoStates state) {
-          if (state is InsertDatabaseState) {
-            Navigator.pop(context);
+          if (state is InsertTaskToDatabaseState) {
+            TodoCubit.get(context).changeBottomSheet(
+              icon: Icons.edit,
+              isShow: false,
+            );
           }
         },
         builder: (BuildContext context, state) {
@@ -69,11 +70,7 @@ class HomeLayout extends StatelessWidget {
                   onPressed: () {
                     if (cubit.isBottomSheetShown) {
                       if (formKey.currentState!.validate()) {
-                        cubit.insertToDatabase(
-                          title: titleController.text,
-                          date: dateController.text,
-                          time: timeController.text,
-                        );
+                        cubit.insertTaskDatabase();
                       }
                     } else {
                       scaffoldKey.currentState
@@ -88,7 +85,7 @@ class HomeLayout extends StatelessWidget {
                                     children: [
                                       FiledText(
                                         onTap: () {},
-                                        controller: titleController,
+                                        controller: cubit.titleController,
                                         inputType: TextInputType.text,
                                         prefix: Icons.title_rounded,
                                         textLabel: ' New  Task',
@@ -98,7 +95,7 @@ class HomeLayout extends StatelessWidget {
                                         height: 20,
                                       ),
                                       FiledText(
-                                        controller: timeController,
+                                        controller: cubit.timeController,
                                         inputType: TextInputType.datetime,
                                         prefix: Icons.timelapse,
                                         textLabel: ' Time Task',
@@ -107,7 +104,7 @@ class HomeLayout extends StatelessWidget {
                                             context: context,
                                             initialTime: TimeOfDay.now(),
                                           ).then((value) {
-                                            timeController.text = value!
+                                            cubit.timeController.text = value!
                                                 .format(context)
                                                 .toString();
                                           });
@@ -118,7 +115,7 @@ class HomeLayout extends StatelessWidget {
                                         height: 20,
                                       ),
                                       FiledText(
-                                          controller: dateController,
+                                          controller: cubit.dateController,
                                           inputType: TextInputType.datetime,
                                           prefix: Icons.calendar_today,
                                           textLabel: ' Date Task',
@@ -133,7 +130,7 @@ class HomeLayout extends StatelessWidget {
                                                   DateTime.parse('2022-09-30'),
                                             ).then(
                                               (value) {
-                                                dateController.text =
+                                                cubit.dateController.text =
                                                     DateFormat.yMMMd()
                                                         .format(value!);
                                               },
@@ -145,12 +142,12 @@ class HomeLayout extends StatelessWidget {
                           )
                           .closed
                           .then((value) {
-                        cubit.ChangeBottomSheet(
+                        cubit.changeBottomSheet(
                           icon: Icons.edit,
                           isShow: false,
                         );
                       });
-                      cubit.ChangeBottomSheet(
+                      cubit.changeBottomSheet(
                         icon: Icons.add,
                         isShow: true,
                       );
